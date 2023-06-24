@@ -1,0 +1,3 @@
+[submodule "DC_Motor_controller"]
+	path = DC_Motor_controller
+	url = https://github.com/mhtayebzadeh/DC_Motor_controller
