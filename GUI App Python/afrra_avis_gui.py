@@ -332,7 +332,7 @@ class AUT_AAFO(QtCore.QObject):
                 return
             
             file = open(name,'w')
-            header = ["time" , "theta_ankle" , "theta_ankle_sp" , "force_loadcell" , "force_sp"]
+            header = ["time_ms" , "theta_ankle" , "theta_ankle_sp" , "force_loadcell" , "force_sp" , "motor_current"]
             
             file.write(" , ".join(header))
             file.write("\n")
@@ -376,12 +376,14 @@ class AUT_AAFO(QtCore.QObject):
             print("wrong packet recieved Errrrrrrrrrrrrrrr")
             return 
         
-        if len(vec_float) != 4:
+        if len(vec_float) != 6 :
             return 
-        theta_ankle = vec_float[0]
-        sp_theta_ankle = vec_float[1]
-        force_loadcell = vec_float[2]
-        sp_force = vec_float[3] 
+        time_ms = vec_float[0]
+        theta_ankle = vec_float[1]
+        sp_theta_ankle = vec_float[2]
+        force_loadcell = vec_float[3]
+        sp_force = vec_float[4] 
+        motor_current = vec_float[5] 
         
         speed = 0
         if theta_ankle >= 0 :
@@ -396,7 +398,8 @@ class AUT_AAFO(QtCore.QObject):
         ## save to buff 
         if self.is_record_started:
             t = time.time() - self.start_record_time
-            a = [t , [theta_ankle , sp_theta_ankle , force_loadcell , sp_force]]
+            # t = time_ms # time.time() - self.start_record_time
+            a = [time_ms , [theta_ankle , sp_theta_ankle , force_loadcell , sp_force , motor_current]]
             self.saved_data.append(a)
             
             if t > self.MAX_RECORD_TIME:

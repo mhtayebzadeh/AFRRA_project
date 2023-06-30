@@ -39,6 +39,7 @@
 #define SPEED_CONTROL_MODE 3
 #define IMPEDANCE_CONTROL_MODE 4
 #define FORCE_CONTROL_MODE 5
+#define SYSTEM_IDENTIFICATION_MODE 8
 #define MICRO_TEST_MODE 10
 
 
@@ -79,6 +80,8 @@ uint8_t UART1_rxBuffer[TOTAL_PACKET_SIZE] , c , buff_1[TOTAL_PACKET_SIZE];
 uint8_t UART2_rxBuffer[TOTAL_PACKET_SIZE], buff_2[TOTAL_PACKET_SIZE];
 uint8_t UART6_rxBuffer[TOTAL_PACKET_SIZE], buff_6[TOTAL_PACKET_SIZE];
 
+uint8_t send_data_to_pc = 1; // true
+
 int is_uart1_single_byte_recieved = 1 , is_uart2_single_byte_recieved = 1 , is_uart3_single_byte_recieved = 1;
 uint32_t adc_buff[4];
 double fsr1,fsr2,fsr3,theta_ankle;
@@ -98,9 +101,11 @@ double err_pos,pid_out,err_pos_dot, sum_err_pos, ff, control_signal , last_err_p
 double Ki_pos = 10.0,Kd_pos = 0,Kp_pos = 100.0;
 double sp_force , err_force,loadcell_force , last_err_force, sum_err_force,Kp_force = 3.0 ,Kd_force=0 , Ki_force =0.1;
 double force , alpha_force = 0.85 , ff_impedance = 0;
-
+double current_sp_sysID = 0;
 double freq = 3.14;
 int32_t load_int;
+char str_buffer[60];
+uint32_t time_ms = 0;
 int32_t i, ii , i2 , n_byte;
 /* USER CODE END PV */
 
@@ -122,6 +127,9 @@ static void MX_TIM4_Init(void);
 
 void send_packet_to_motor(uint8_t command , int32_t val)
 {
+	//if (command == SET_MOTOR_CURRENT_SP_ID)
+	//	current_sp_sysID = ((float)val)/1000.0;
+	
 	uint8_t buf[TOTAL_PACKET_SIZE] = {0xAA , 0xAA , command , (val>>24 & 0xFF) , (val>>16 & 0xFF) , (val>>8 & 0xFF) , (val & 0xFF) , 0xBB};
 	//HAL_UART_Transmit_DMA(&huart6 , buf , TOTAL_PACKET_SIZE);
 	HAL_UART_Transmit(&huart2 , buf , TOTAL_PACKET_SIZE , 10);
@@ -429,6 +437,13 @@ int main(void)
 			else 
 				send_packet_to_motor(SET_MOTOR_SPEED_SP_ID , 0);
 				
+		}		
+		else if (control_mode == SYSTEM_IDENTIFICATION_MODE)
+		{
+			if (MOTOR_ACTIVE_FLAG)
+				send_packet_to_motor(SET_MOTOR_CURRENT_SP_ID , -1000.0*current_sp_sysID);
+			else 
+				send_packet_to_motor(SET_MOTOR_CURRENT_SP_ID , 1000.0*0);
 		}
 		else {
 			if (!HAL_GPIO_ReadPin(MicroSwitch_Down_GPIO_Port , MicroSwitch_Down_Pin))
@@ -441,16 +456,16 @@ int main(void)
 		
 		
 		// send data
+		if (send_data_to_pc)
 		{
-			char str_buffer[40];
-			// theta_ankle , sp_theta_ankle , loadcell_force , sp_force
-			n_byte = sprintf(str_buffer, "%.4f , %.4f ,%.3f , %.3f \n\r",theta_ankle , sp_theta_ankle , loadcell_force , sp_force);
-      HAL_UART_Transmit(&huart6, (uint8_t *)str_buffer, n_byte, 5);
-		}
 			
-		
+			// theta_ankle , sp_theta_ankle , loadcell_force , sp_force
+			time_ms = HAL_GetTick();
+			n_byte = sprintf(str_buffer, "%d , %.4f , %.4f ,%.3f , %.3f , %.3f \n\r" , time_ms , theta_ankle , sp_theta_ankle , loadcell_force , sp_force , current_sp_sysID);
+      HAL_UART_Transmit(&huart6, (uint8_t *)str_buffer, n_byte, 8);
+		}
 				
-	 HAL_Delay(8);
+	 HAL_Delay(4);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
