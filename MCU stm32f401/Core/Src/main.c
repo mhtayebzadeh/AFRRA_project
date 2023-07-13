@@ -33,6 +33,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define PI 3.141592
 
 #define CURRENT_CONTROL_MODE 1
 #define POSITION_CONTROL_MODE 2
@@ -103,6 +104,8 @@ double sp_force , err_force,loadcell_force , last_err_force, sum_err_force,Kp_fo
 double force , alpha_force = 0.85 , ff_impedance = 0;
 double current_sp_sysID = 0;
 double freq = 3.14;
+double amp_sysID = 0 , freq_sysID = 0.2;
+double t = 0;
 int32_t load_int;
 char str_buffer[60];
 uint32_t time_ms = 0;
@@ -348,7 +351,7 @@ int main(void)
   while (1)
   {
 	
-		double t = ((double)HAL_GetTick())/1000.0; 
+		t = ((double)HAL_GetTick())/1000.0; 
 		//double p = 6.2*sin(0.1*t);
 		//send_packet_to_motor(SET_MOTOR_POSITION_SP_ID , (int32_t)(p*1000.0) ); 
 		
@@ -440,8 +443,11 @@ int main(void)
 		}		
 		else if (control_mode == SYSTEM_IDENTIFICATION_MODE)
 		{
+			
+			current_sp_sysID = amp_sysID*sin(2*PI*freq_sysID * t);
+			
 			if (MOTOR_ACTIVE_FLAG)
-				send_packet_to_motor(SET_MOTOR_CURRENT_SP_ID , -1000.0*current_sp_sysID);
+				send_packet_to_motor(SET_MOTOR_CURRENT_SP_ID , -1000.0 * current_sp_sysID);
 			else 
 				send_packet_to_motor(SET_MOTOR_CURRENT_SP_ID , 1000.0*0);
 		}
