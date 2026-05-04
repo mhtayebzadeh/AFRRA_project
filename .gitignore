@@ -13,6 +13,7 @@
 
 **/MDK-ARM/*
 **/Drivers/*
+**/Debugs/*
 *.mxproject
 
 **/build/*

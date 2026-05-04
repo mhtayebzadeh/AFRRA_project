@@ -47,6 +47,10 @@
 #define TOTAL_PACKET_SIZE 8
 
 #define LOADCELL_DATA_ID 1
+#define SET_KP_IMPEDANCE_ID 10
+#define SET_KD_IMPEDANCE_ID 11
+#define SET_KI_IMPEDANCE_ID 12
+#define SET_ANKLE_POSITION_SP_ID 13
 
 #define SET_MOTOR_POSITION_SP_ID 21
 #define SET_MOTOR_SPEED_SP_ID 22
@@ -62,7 +66,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
- ADC_HandleTypeDef hadc1;
+ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
 TIM_HandleTypeDef htim4;
@@ -107,7 +111,7 @@ double freq = 3.14;
 double amp_sysID = 0 , freq_sysID = 0.2;
 double t = 0;
 int32_t load_int;
-char str_buffer[60];
+char str_buffer[80];
 uint32_t time_ms = 0;
 int32_t i, ii , i2 , n_byte;
 /* USER CODE END PV */
@@ -195,6 +199,22 @@ void read_packet_data(uint8_t* buf)
 		force = ((double)load_int)/1000.0;
 		loadcell_force = alpha_force*loadcell_force + (1.0 - alpha_force)*force;
 	}
+  else if (command == SET_KP_IMPEDANCE_ID)
+  {
+    Kp_impedance = ((double)value) / 1000.0;
+  }
+  else if (command == SET_KD_IMPEDANCE_ID)
+  {
+    Kd_impedance = ((double)value) / 1000.0;
+  }
+  else if (command == SET_KI_IMPEDANCE_ID)
+  {
+    Ki_impedance = ((double)value) / 1000.0;
+  }
+  else if (command == SET_ANKLE_POSITION_SP_ID)
+  {
+    sp_theta_ankle = ((double)value) / 1000.0;
+  }
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -236,22 +256,22 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			{	
 				read_packet_data(buff_2);
 				is_uart2_single_byte_recieved = 0;
-				HAL_UART_Receive_DMA(&huart2, UART2_rxBuffer, TOTAL_PACKET_SIZE);
+        HAL_UART_Receive_DMA(&huart6, UART2_rxBuffer, TOTAL_PACKET_SIZE);
 				return ;
 			}
 			is_uart2_single_byte_recieved = 1;
-			HAL_UART_Receive_DMA(&huart2, UART2_rxBuffer, 1);
+      HAL_UART_Receive_DMA(&huart6, UART2_rxBuffer, 1);
 		} 
 		else {
 			if (check_packet(UART2_rxBuffer))	// correct packet recieved
 			{	
 				i2++;
 				read_packet_data(UART2_rxBuffer);
-				HAL_UART_Receive_DMA(&huart2, UART2_rxBuffer, TOTAL_PACKET_SIZE);
+        HAL_UART_Receive_DMA(&huart6, UART2_rxBuffer, TOTAL_PACKET_SIZE);
 				return ;
 			}
 			is_uart2_single_byte_recieved = 1;
-			HAL_UART_Receive_DMA(&huart2, UART2_rxBuffer, 1);
+      HAL_UART_Receive_DMA(&huart6, UART2_rxBuffer, 1);
 		}
 		
 	}else if (huart->Instance == USART2) {		// Motor
@@ -309,6 +329,7 @@ double abs_f(double a)
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -465,10 +486,10 @@ int main(void)
 		if (send_data_to_pc)
 		{
 			
-			// theta_ankle , sp_theta_ankle , loadcell_force , sp_force
-			time_ms = HAL_GetTick();
-			n_byte = sprintf(str_buffer, "%d , %.4f , %.4f ,%.3f , %.3f , %.3f \n\r" , time_ms , theta_ankle , sp_theta_ankle , loadcell_force , sp_force , current_sp_sysID);
-      HAL_UART_Transmit(&huart6, (uint8_t *)str_buffer, n_byte, 8);
+            // time_ms , theta_ankle , theta_dot , sp_theta_ankle , loadcell_force , sp_force , current_sp_sysID
+            time_ms = HAL_GetTick();
+            n_byte = sprintf(str_buffer, "%d , %.4f , %.4f , %.4f , %.3f , %.3f , %.3f \r\n", time_ms, theta_ankle, theta_dot, sp_theta_ankle, loadcell_force, sp_force, current_sp_sysID);
+            HAL_UART_Transmit(&huart6, (uint8_t *)str_buffer, n_byte, 50);
 		}
 				
 	 HAL_Delay(4);
@@ -787,6 +808,8 @@ static void MX_DMA_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
+/* USER CODE BEGIN MX_GPIO_Init_1 */
+/* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
@@ -809,6 +832,8 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
+/* USER CODE BEGIN MX_GPIO_Init_2 */
+/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
